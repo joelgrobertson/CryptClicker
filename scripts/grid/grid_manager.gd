@@ -13,7 +13,7 @@ var selected_cell: Node2D = null
 
 # Colors
 var color_grid_line := Color(1, 1, 1, 0.08)
-var color_hover := Color(1, 1, 1, 0.12)
+var color_hover := Color(1, 1, 1, 0.15)
 var color_castle := Color(0.9, 0.75, 0.3, 0.15)
 var color_attack := Color(1, 0.2, 0.2, 0.2)
 
@@ -53,10 +53,11 @@ func _create_grid():
 			column.append(cell)
 		cells.append(column)
 
+func _process(_delta):
+	# Update hover every frame — reliable regardless of input handling
+	_update_hover()
+
 func _unhandled_input(event):
-	if event is InputEventMouseMotion:
-		_update_hover()
-	
 	if event.is_action_pressed("grid_interact"):
 		var cell = get_cell_at_mouse()
 		if cell and not cell.is_castle:
@@ -71,7 +72,7 @@ func _update_hover():
 		hovered_cell = new_hover
 		if hovered_cell:
 			hovered_cell.is_hovered = true
-	queue_redraw()
+		queue_redraw()
 
 func get_cell_at_mouse() -> Node2D:
 	var mouse_pos = get_global_mouse_position()
@@ -167,6 +168,3 @@ func _draw_unit_badge(cell: Node2D, rect: Rect2):
 	var badge_color = Color.GREEN if filled >= ordered else Color.YELLOW
 	draw_circle(badge_pos + Vector2(10, 10), 12, Color(0, 0, 0, 0.6))
 	draw_circle(badge_pos + Vector2(10, 10), 10, badge_color)
-	
-	# We can't easily draw text in _draw(), so unit counts will be shown
-	# via Label nodes on the cells (see grid_cell.gd)

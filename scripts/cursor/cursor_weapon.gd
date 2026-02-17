@@ -4,7 +4,7 @@ extends Node2D
 
 # --- Config ---
 @export var base_damage: float = 10.0
-@export var hit_radius: float = 20.0 # Pixel radius for click hit detection
+@export var hit_radius: float = 60.0 # Increased from 20 — much more forgiving click detection
 
 # --- State ---
 var is_holding: bool = false
@@ -15,8 +15,6 @@ var last_attack_pos: Vector2 = Vector2.ZERO
 var damage_number_scene: PackedScene
 
 func _ready():
-	# We'll create damage numbers as simple labels
-	# You can replace this with a proper scene later
 	pass
 
 func _process(delta):
@@ -27,7 +25,8 @@ func _process(delta):
 	if is_holding:
 		hold_time += delta
 
-func _unhandled_input(event):
+# Using _input instead of _unhandled_input so clicks aren't eaten by other nodes
+func _input(event):
 	# Only process during active wave
 	if GameManager.current_state != GameManager.GameState.WAVE_ACTIVE:
 		return
@@ -39,7 +38,6 @@ func _unhandled_input(event):
 		_perform_basic_attack()
 	
 	if event.is_action_released("cursor_attack"):
-		# Future: if hold_time > threshold, do charged attack instead
 		is_holding = false
 		hold_time = 0.0
 
@@ -64,7 +62,6 @@ func _perform_basic_attack():
 			if UpgradeManager.chain_lightning_level > 0:
 				_apply_chain_lightning(closest, damage)
 	else:
-		# Miss — small visual feedback at click position
 		_spawn_miss_effect(mouse_pos)
 
 func _get_enemies_at_position(pos: Vector2, radius: float) -> Array:
@@ -104,16 +101,13 @@ func _spawn_damage_number(pos: Vector2, damage: float):
 	tween.chain().tween_callback(label.queue_free)
 
 func _spawn_hit_effect(pos: Vector2):
-	# Simple expanding circle effect
+	# Quick flash circle at hit position
 	var hit = Node2D.new()
 	hit.global_position = pos
 	hit.z_index = 50
 	get_tree().current_scene.add_child(hit)
 	
-	# Use a custom draw for a quick spark effect
-	var sprite = Sprite2D.new()
-	# For now, we'll just use the damage number as feedback
-	# Replace with particle effect or sprite later
+	# For now just clean up — replace with particles later
 	hit.queue_free()
 
 func _spawn_miss_effect(pos: Vector2):
