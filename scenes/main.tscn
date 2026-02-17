@@ -1,0 +1,124 @@
+[gd_scene format=3 uid="uid://cndegyxjmfnoo"]
+
+[ext_resource type="Script" uid="uid://cocalhy7enkal" path="res://scripts/castle.gd" id="1_0wfyh"]
+[ext_resource type="Script" uid="uid://dg4bfh8j0jeol" path="res://scripts/grid/grid_manager.gd" id="2_jyhfs"]
+[ext_resource type="Script" uid="uid://41f6epqokvn6" path="res://scripts/cursor/cursor_weapon.gd" id="2_sugp2"]
+[ext_resource type="Script" uid="uid://cwy5f6jkq2itb" path="res://scripts/managers/wave_manager.gd" id="4_tefeu"]
+[ext_resource type="Script" uid="uid://cimlhvw5k3lq" path="res://scripts/camera_controller.gd" id="5_o6xl0"]
+[ext_resource type="Script" uid="uid://bdqq40jnkpiws" path="res://scripts/ui/hud.gd" id="6_tipki"]
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_tefeu"]
+vertices = PackedVector2Array(938, -521.02344, 938, 518.0078, -937.0625, 520.97656, -943.9297, -524.96875)
+polygons = Array[PackedInt32Array]([PackedInt32Array(0, 1, 2, 3)])
+outlines = Array[PackedVector2Array]([PackedVector2Array(-954, -535, 948, -531, 948, 528, -947, 531)])
+
+[node name="Main" type="Node2D" unique_id=2105535622]
+
+[node name="NavigationRegion2D" type="NavigationRegion2D" parent="." unique_id=1096698600]
+navigation_polygon = SubResource("NavigationPolygon_tefeu")
+
+[node name="Background" type="ColorRect" parent="NavigationRegion2D" unique_id=1261998285]
+offset_left = -1250.0
+offset_top = -1250.0
+offset_right = 1250.0
+offset_bottom = 1250.0
+color = Color(0.16869462, 0.37700558, 0.15380293, 1)
+
+[node name="Castle" type="Node2D" parent="." unique_id=662394700]
+script = ExtResource("1_0wfyh")
+
+[node name="Sprite2D" type="Sprite2D" parent="Castle" unique_id=1556330840]
+
+[node name="HealthLabel" type="Label" parent="Castle" unique_id=123247387]
+offset_left = -40.0
+offset_top = 30.0
+offset_right = 48.0
+offset_bottom = 53.0
+theme_override_font_sizes/font_size = 12
+text = "1000 / 1000"
+
+[node name="GridManager" type="Node2D" parent="." unique_id=1771540209]
+script = ExtResource("2_jyhfs")
+
+[node name="CursorWeapon" type="Node2D" parent="." unique_id=2006168490]
+script = ExtResource("2_sugp2")
+
+[node name="WaveManager" type="Node" parent="." unique_id=1609045386]
+script = ExtResource("4_tefeu")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1765822147]
+script = ExtResource("5_o6xl0")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1537776840]
+layer = 10
+
+[node name="HUD" type="Control" parent="CanvasLayer" unique_id=1012015368]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("6_tipki")
+
+[node name="TopBar" type="HBoxContainer" parent="CanvasLayer/HUD" unique_id=2073759927]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 40.0
+grow_horizontal = 2
+
+[node name="WaveLabel" type="Label" parent="CanvasLayer/HUD/TopBar" unique_id=1745026431]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Wave: 0"
+
+[node name="GoldLabel" type="Label" parent="CanvasLayer/HUD/TopBar" unique_id=1861080144]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Gold: 0"
+
+[node name="CastleLabel" type="Label" parent="CanvasLayer/HUD/TopBar" unique_id=661947789]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Castle: 100%"
+
+[node name="UnitsLabel" type="Label" parent="CanvasLayer/HUD/TopBar" unique_id=1585765417]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Units: 0 / 8"
+
+[node name="WaveBanner" type="Label" parent="CanvasLayer/HUD" unique_id=1695841207]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -11.5
+offset_right = 20.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 48
+text = "WAVE 1"
+horizontal_alignment = 1
+
+[node name="IntermissionLabel" type="Label" parent="CanvasLayer/HUD" unique_id=1968217331]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -11.5
+offset_right = 20.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 1
