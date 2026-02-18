@@ -8,7 +8,7 @@ extends Node2D
 @onready var camera: Camera2D = $Camera2D
 @onready var canvas_layer: CanvasLayer = $CanvasLayer
 @onready var hud: Control = $CanvasLayer/HUD
-@onready var loadout_manager: Node = $LoadoutManager
+@onready var loadout_manager: Node = LoadoutManager
 @onready var shop_ui: CanvasLayer = $ShopUI
 @onready var pick_ui: CanvasLayer = $PickUI
 
