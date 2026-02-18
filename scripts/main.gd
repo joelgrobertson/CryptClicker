@@ -6,10 +6,22 @@ extends Node2D
 @onready var wave_manager: Node = $WaveManager
 @onready var cursor_weapon: Node2D = $CursorWeapon
 @onready var castle: Node2D = $Castle
+@onready var camera: Camera2D = $Camera2D
+@onready var canvas_layer: CanvasLayer = $CanvasLayer
 
 var started: bool = false
 
 func _ready():
+	# --- Process modes for pause support ---
+	# Only these specific nodes should work while paused.
+	# Do NOT set Main to ALWAYS — that would make all children inherit it.
+	# Camera: zoom/pan should work while paused
+	camera.process_mode = Node.PROCESS_MODE_ALWAYS
+	# Grid manager: hover highlighting should work while paused
+	grid_manager.process_mode = Node.PROCESS_MODE_ALWAYS
+	# HUD canvas layer: pause overlay + pause input handler
+	canvas_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	
 	# Setup wave manager with grid reference
 	wave_manager.setup(grid_manager)
 	
@@ -35,7 +47,3 @@ func _on_wave_completed(wave_number: int):
 func _on_game_over(final_wave: int, total_kills: int, total_gold: int):
 	print("=== GAME OVER ===")
 	print("Wave: %d | Kills: %d | Gold: %d" % [final_wave, total_kills, total_gold])
-
-func _unhandled_input(event):
-	if event.is_action_pressed("pause"):
-		get_tree().paused = !get_tree().paused

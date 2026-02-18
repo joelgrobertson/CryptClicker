@@ -140,5 +140,4 @@ script = ExtResource("9_ya4ey")
 script = ExtResource("10_eb6dy")
 
 [node name="ShopUI" type="CanvasLayer" parent="." unique_id=413355963]
-process_mode = 3
 script = ExtResource("11_trceg")

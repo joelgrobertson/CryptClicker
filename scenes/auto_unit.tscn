@@ -1,0 +1,22 @@
+[gd_scene format=3 uid="uid://ymjyqtwmxdrs"]
+
+[ext_resource type="Script" uid="uid://bnugqe5kgulje" path="res://scripts/units/auto_unit.gd" id="1_3dfwn"]
+[ext_resource type="Texture2D" uid="uid://b8wlbdubd83p3" path="res://icon.svg" id="2_cw00f"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_tkdbb"]
+
+[node name="AutoUnit" type="CharacterBody2D" unique_id=1609241066]
+collision_mask = 2
+script = ExtResource("1_3dfwn")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1361862350]
+modulate = Color(0, 1, 0, 1)
+scale = Vector2(0.12, 0.12)
+texture = ExtResource("2_cw00f")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1897973846]
+shape = SubResource("CircleShape2D_tkdbb")
+
+[node name="NavigationAgent2D" type="NavigationAgent2D" parent="." unique_id=580372818]
+path_desired_distance = 8.0
+target_desired_distance = 8.0

@@ -8,9 +8,6 @@
 [ext_resource type="Script" uid="uid://cimlhvw5k3lq" path="res://scripts/camera_controller.gd" id="5_o6xl0"]
 [ext_resource type="PackedScene" uid="uid://cok720mavhk17" path="res://scenes/enemy.tscn" id="6_85g3d"]
 [ext_resource type="Script" uid="uid://bdqq40jnkpiws" path="res://scripts/ui/hud.gd" id="6_tipki"]
-[ext_resource type="Script" uid="uid://ciwgpeu1qceur" path="res://scripts/ui/cell_panel.gd" id="9_ya4ey"]
-[ext_resource type="Script" uid="uid://c5i021ngmwhhj" path="res://scripts/managers/requisition_manager.gd" id="10_eb6dy"]
-[ext_resource type="Script" uid="uid://cbaea1drhbukq" path="res://scripts/ui/shop_ui.gd" id="11_trceg"]
 
 [sub_resource type="NavigationPolygon" id="NavigationPolygon_tefeu"]
 vertices = PackedVector2Array(938, -521.02344, 938, 518.0078, -937.0625, 520.97656, -943.9297, -524.96875)
@@ -129,16 +126,3 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_font_sizes/font_size = 24
 horizontal_alignment = 1
-
-[node name="CellPanel" type="PanelContainer" parent="CanvasLayer" unique_id=1855175518]
-visible = false
-offset_right = 40.0
-offset_bottom = 40.0
-script = ExtResource("9_ya4ey")
-
-[node name="RequisitionManager" type="Node" parent="." unique_id=2122801148]
-script = ExtResource("10_eb6dy")
-
-[node name="ShopUI" type="CanvasLayer" parent="." unique_id=413355963]
-process_mode = 3
-script = ExtResource("11_trceg")

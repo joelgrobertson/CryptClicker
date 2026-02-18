@@ -20,7 +20,7 @@ var unit_max_count_level: int = 0
 var march_speed_level: int = 0
 
 # Unlocked unit types
-var unlocked_units: Array[String] = ["militia"]
+var unlocked_units: Array[String] = ["skeleton_melee"]
 
 # --- Defense Upgrades ---
 var arrow_tower_level: int = 0
@@ -66,7 +66,7 @@ func reset_upgrades():
 	unit_spawn_rate_level = 0
 	unit_max_count_level = 0
 	march_speed_level = 0
-	unlocked_units = ["militia"]
+	unlocked_units = ["skeleton_melee"]
 	arrow_tower_level = 0
 	cannon_tower_level = 0
 	frost_tower_level = 0

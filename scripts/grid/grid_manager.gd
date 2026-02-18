@@ -57,7 +57,7 @@ func _process(_delta):
 	# Update hover every frame — reliable regardless of input handling
 	_update_hover()
 
-func _unhandled_input(event):
+func _input(event):
 	if event.is_action_pressed("grid_interact"):
 		var cell = get_cell_at_mouse()
 		if cell and not cell.is_castle:
