@@ -29,7 +29,7 @@ var mana: float = 100.0:
 		mana = clamp(value, 0.0, max_mana)
 		mana_changed.emit(mana, max_mana)
 var max_mana: float = 100.0
-var base_mana_regen: float = 3.0
+var base_mana_regen: float = 2.0
 
 # --- Wave ---
 var current_wave: int = 0

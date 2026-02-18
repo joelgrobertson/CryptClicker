@@ -24,6 +24,11 @@ var meteor_charging: bool = false
 var meteor_charge_time: float = 0.0
 var meteor_cooldown_timer: float = 0.0
 
+# Right-click hold summon state
+var is_summoning: bool = false
+var summon_stream_timer: float = 0.0
+var summon_stream_rate: float = 0.25 # seconds between summons while holding
+
 func _ready():
 	pass
 
@@ -41,10 +46,17 @@ func _process(delta):
 	if meteor_cooldown_timer > 0:
 		meteor_cooldown_timer -= delta
 	
-	# Hold processing
+	# Hold processing (left click)
 	if is_holding:
 		hold_time += delta
 		_process_hold(delta)
+	
+	# Hold processing (right click — continuous summon stream)
+	if is_summoning:
+		summon_stream_timer -= delta
+		if summon_stream_timer <= 0:
+			_perform_summon()
+			summon_stream_timer = summon_stream_rate
 
 func _input(event):
 	if GameManager.current_state != GameManager.GameState.WAVE_ACTIVE:
@@ -75,9 +87,13 @@ func _input(event):
 		meteor_charging = false
 		meteor_charge_time = 0.0
 	
-	# --- RIGHT CLICK: Summon ---
+	# --- RIGHT CLICK: Summon (click = single, hold = stream) ---
 	if event.is_action_pressed("grid_interact"):
 		_perform_summon()
+		is_summoning = true
+		summon_stream_timer = summon_stream_rate
+	if event.is_action_released("grid_interact"):
+		is_summoning = false
 	
 	# --- SCROLL: Cycle summons ---
 	if event is InputEventMouseButton and event.pressed and not event.ctrl_pressed:
