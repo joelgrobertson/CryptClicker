@@ -1,163 +1,93 @@
 # shop_ui.gd
-# Between-wave shop screen. Buy upgrades, repair castle, start next wave.
+# Between-wave shop. Passive upgrades only — tools come from mid-wave picks.
 extends CanvasLayer
 
 var is_open: bool = false
+var loadout: Node = null
 
-# UI refs — built dynamically
 var panel: PanelContainer
 var title_label: Label
 var gold_label: Label
 var tab_container: TabContainer
 var start_wave_btn: Button
-var items_by_tab: Dictionary = {} # tab_name -> [item_configs]
 
-# Upgrade definitions
+signal start_wave_requested
+
 var shop_items: Array = [
-	# Cursor upgrades
-	{
-		"id": "smite",
-		"tab": "Cursor",
-		"name": "Smite",
-		"description": "Click damage +5",
-		"base_cost": 30,
-		"cost_scaling": 1.4,
-		"max_level": 10,
-		"get_level": func(): return UpgradeManager.smite_level,
-		"apply": func(): UpgradeManager.smite_level += 1,
-	},
-	{
-		"id": "gold_magnet",
-		"tab": "Cursor",
-		"name": "Gold Magnet",
-		"description": "Gold pickup radius +50",
-		"base_cost": 40,
-		"cost_scaling": 1.3,
-		"max_level": 5,
-		"get_level": func(): return UpgradeManager.gold_magnet_level,
-		"apply": func(): UpgradeManager.gold_magnet_level += 1,
-	},
-	# Unit upgrades
-	{
-		"id": "unit_hp",
-		"tab": "Units",
-		"name": "Unit Vitality",
-		"description": "All units +10 HP",
-		"base_cost": 50,
-		"cost_scaling": 1.5,
-		"max_level": 10,
-		"get_level": func(): return int(UpgradeManager.unit_hp_bonus / 10.0),
-		"apply": func(): UpgradeManager.unit_hp_bonus += 10.0,
-	},
-	{
-		"id": "unit_damage",
-		"tab": "Units",
-		"name": "Unit Strength",
-		"description": "All units +3 damage",
-		"base_cost": 50,
-		"cost_scaling": 1.5,
-		"max_level": 10,
-		"get_level": func(): return int(UpgradeManager.unit_damage_bonus / 3.0),
-		"apply": func(): UpgradeManager.unit_damage_bonus += 3.0,
-	},
-	{
-		"id": "spawn_rate",
-		"tab": "Units",
-		"name": "Faster Spawning",
-		"description": "Units spawn faster",
-		"base_cost": 60,
-		"cost_scaling": 1.6,
-		"max_level": 6,
-		"get_level": func(): return UpgradeManager.unit_spawn_rate_level,
-		"apply": func(): UpgradeManager.unit_spawn_rate_level += 1,
-	},
-	{
-		"id": "max_units",
-		"tab": "Units",
-		"name": "Larger Army",
-		"description": "Unit cap +3",
-		"base_cost": 75,
-		"cost_scaling": 1.7,
-		"max_level": 8,
-		"get_level": func(): return UpgradeManager.unit_max_count_level,
-		"apply": func(): UpgradeManager.unit_max_count_level += 1,
-	},
-	{
-		"id": "march_speed",
-		"tab": "Units",
-		"name": "Swift March",
-		"description": "Units move to cells faster",
-		"base_cost": 40,
-		"cost_scaling": 1.3,
-		"max_level": 5,
-		"get_level": func(): return UpgradeManager.march_speed_level,
-		"apply": func(): UpgradeManager.march_speed_level += 1,
-	},
-	{
-		"id": "unlock_skeleton_ranged",
-		"tab": "Units",
-		"name": "Unlock: Sk. Archer",
-		"description": "Ranged skeleton unit",
-		"base_cost": 100,
-		"cost_scaling": 1.0,
-		"max_level": 1,
-		"get_level": func(): return 1 if "skeleton_ranged" in UpgradeManager.unlocked_units else 0,
-		"apply": func(): UpgradeManager.unlocked_units.append("skeleton_ranged"),
-	},
-	{
-		"id": "unlock_goblin",
-		"tab": "Units",
-		"name": "Unlock: Goblin",
-		"description": "Fast melee unit",
-		"base_cost": 150,
-		"cost_scaling": 1.0,
-		"max_level": 1,
-		"get_level": func(): return 1 if "goblin" in UpgradeManager.unlocked_units else 0,
-		"apply": func(): UpgradeManager.unlocked_units.append("goblin"),
-	},
-	# Global upgrades
-	{
-		"id": "gold_bonus",
-		"tab": "Global",
-		"name": "Greed",
-		"description": "+1 gold per kill",
-		"base_cost": 60,
-		"cost_scaling": 1.5,
-		"max_level": 5,
-		"get_level": func(): return UpgradeManager.gold_per_kill_bonus,
-		"apply": func(): UpgradeManager.gold_per_kill_bonus += 1,
-	},
-	{
-		"id": "repair",
-		"tab": "Global",
-		"name": "Repair Crypt",
-		"description": "Restore 200 HP",
-		"base_cost": 40,
-		"cost_scaling": 1.2,
-		"max_level": 99, # Unlimited
-		"get_level": func(): return 0, # Always shows as available
-		"apply": func(): GameManager.repair_castle(200.0),
-	},
+	# Mana
+	{"id": "mana_regen", "tab": "Mana", "name": "Dark Flow", "description": "Mana regen +1/sec",
+	 "base_cost": 40, "cost_scaling": 1.4, "max_level": 8,
+	 "get_level": func(): return UpgradeManager.mana_regen_level,
+	 "apply": func(): UpgradeManager.mana_regen_level += 1},
+	{"id": "max_mana", "tab": "Mana", "name": "Deep Reserves", "description": "Max mana +25",
+	 "base_cost": 50, "cost_scaling": 1.4, "max_level": 8,
+	 "get_level": func(): return UpgradeManager.max_mana_level,
+	 "apply": func():
+		UpgradeManager.max_mana_level += 1
+		GameManager.max_mana = 100.0 + UpgradeManager.get_max_mana_bonus()},
+	{"id": "mana_on_kill", "tab": "Mana", "name": "Soul Siphon", "description": "+1 mana per kill",
+	 "base_cost": 60, "cost_scaling": 1.6, "max_level": 5,
+	 "get_level": func(): return UpgradeManager.mana_on_kill_level,
+	 "apply": func(): UpgradeManager.mana_on_kill_level += 1},
+	# Offense
+	{"id": "smite", "tab": "Offense", "name": "Smite Power", "description": "Click damage +5",
+	 "base_cost": 30, "cost_scaling": 1.4, "max_level": 10,
+	 "get_level": func(): return UpgradeManager.smite_level,
+	 "apply": func(): UpgradeManager.smite_level += 1},
+	{"id": "unit_damage", "tab": "Offense", "name": "Sharpened Claws", "description": "All unit damage +3",
+	 "base_cost": 50, "cost_scaling": 1.5, "max_level": 10,
+	 "get_level": func(): return int(UpgradeManager.unit_damage_bonus / 3.0),
+	 "apply": func(): UpgradeManager.unit_damage_bonus += 3.0},
+	# Defense
+	{"id": "unit_hp", "tab": "Defense", "name": "Bone Hardening", "description": "All unit HP +10",
+	 "base_cost": 50, "cost_scaling": 1.5, "max_level": 10,
+	 "get_level": func(): return int(UpgradeManager.unit_hp_bonus / 10.0),
+	 "apply": func(): UpgradeManager.unit_hp_bonus += 10.0},
+	{"id": "fortify", "tab": "Defense", "name": "Fortify Crypt", "description": "Crypt max HP +200",
+	 "base_cost": 80, "cost_scaling": 1.5, "max_level": 5,
+	 "get_level": func(): return UpgradeManager.castle_fortify_level,
+	 "apply": func():
+		UpgradeManager.castle_fortify_level += 1
+		GameManager.castle_max_hp += 200.0
+		GameManager.castle_hp += 200.0},
+	{"id": "repair", "tab": "Defense", "name": "Repair Crypt", "description": "Restore 200 HP",
+	 "base_cost": 40, "cost_scaling": 1.2, "max_level": 99,
+	 "get_level": func(): return 0,
+	 "apply": func(): GameManager.repair_castle(200.0)},
+	# Economy
+	{"id": "greed", "tab": "Economy", "name": "Greed", "description": "+1 gold per kill",
+	 "base_cost": 60, "cost_scaling": 1.5, "max_level": 5,
+	 "get_level": func(): return UpgradeManager.gold_per_kill_bonus,
+	 "apply": func(): UpgradeManager.gold_per_kill_bonus += 1},
+	{"id": "gold_magnet", "tab": "Economy", "name": "Gold Magnet", "description": "Pickup radius +50",
+	 "base_cost": 40, "cost_scaling": 1.3, "max_level": 5,
+	 "get_level": func(): return UpgradeManager.gold_magnet_level,
+	 "apply": func(): UpgradeManager.gold_magnet_level += 1},
+	{"id": "xp_boost", "tab": "Economy", "name": "XP Boost", "description": "+15% XP gain",
+	 "base_cost": 50, "cost_scaling": 1.4, "max_level": 5,
+	 "get_level": func(): return UpgradeManager.xp_boost_level,
+	 "apply": func(): UpgradeManager.xp_boost_level += 1},
 ]
 
 func _ready():
 	layer = 20
 	visible = false
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_ui()
 
+func setup(p_loadout: Node):
+	loadout = p_loadout
+
 func _build_ui():
-	# Full-screen darkening overlay
 	var overlay = ColorRect.new()
 	overlay.color = Color(0, 0, 0, 0.6)
 	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(overlay)
 	
-	# Center panel
 	panel = PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.custom_minimum_size = Vector2(500, 450)
-	panel.position = Vector2(-250, -225)
-	
+	panel.custom_minimum_size = Vector2(500, 480)
+	panel.position = Vector2(-250, -240)
 	var style = StyleBoxFlat.new()
 	style.bg_color = Color(0.08, 0.08, 0.12, 0.98)
 	style.border_color = Color(0.5, 0.4, 0.2)
@@ -177,42 +107,34 @@ func _build_ui():
 	vbox.add_theme_constant_override("separation", 10)
 	margin.add_child(vbox)
 	
-	# Header row
 	var header = HBoxContainer.new()
 	vbox.add_child(header)
-	
 	title_label = Label.new()
 	title_label.text = "WAVE COMPLETE"
 	title_label.add_theme_font_size_override("font_size", 22)
 	title_label.add_theme_color_override("font_color", Color(1, 0.9, 0.5))
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title_label)
-	
 	gold_label = Label.new()
-	gold_label.text = "Gold: 0"
 	gold_label.add_theme_font_size_override("font_size", 18)
 	gold_label.add_theme_color_override("font_color", Color(1, 0.85, 0.1))
 	header.add_child(gold_label)
 	
-	# Tab container for categories
 	tab_container = TabContainer.new()
 	tab_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(tab_container)
 	
-	# Create tabs
-	for tab_name in ["Cursor", "Units", "Global"]:
+	for tab_name in ["Mana", "Offense", "Defense", "Economy"]:
 		var scroll = ScrollContainer.new()
 		scroll.name = tab_name
 		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		tab_container.add_child(scroll)
-		
 		var tab_vbox = VBoxContainer.new()
 		tab_vbox.name = "Items"
 		tab_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		tab_vbox.add_theme_constant_override("separation", 4)
 		scroll.add_child(tab_vbox)
 	
-	# Start wave button
 	start_wave_btn = Button.new()
 	start_wave_btn.text = "START NEXT WAVE"
 	start_wave_btn.custom_minimum_size.y = 40
@@ -223,9 +145,7 @@ func _build_ui():
 func open(wave_number: int):
 	title_label.text = "WAVE %d COMPLETE!" % wave_number
 	gold_label.text = "Gold: %d" % GameManager.gold
-	
 	_populate_items()
-	
 	visible = true
 	is_open = true
 	get_tree().paused = true
@@ -236,79 +156,60 @@ func close():
 	get_tree().paused = false
 
 func _populate_items():
-	# Clear existing items
-	for tab_name in ["Cursor", "Units", "Global"]:
+	for tab_name in ["Mana", "Offense", "Defense", "Economy"]:
 		var tab = tab_container.get_node(tab_name)
 		if tab:
-			var items_container = tab.get_node("Items")
-			for child in items_container.get_children():
+			var items = tab.get_node("Items")
+			for child in items.get_children():
 				child.queue_free()
-	
-	# Add items
 	for item in shop_items:
 		var tab = tab_container.get_node(item["tab"])
-		if not tab:
-			continue
-		var items_container = tab.get_node("Items")
-		_add_shop_item(items_container, item)
+		if tab:
+			_add_shop_item(tab.get_node("Items"), item)
 
 func _add_shop_item(container: VBoxContainer, item: Dictionary):
 	var level = item["get_level"].call()
 	var max_level = item["max_level"]
 	var is_maxed = level >= max_level
-	var cost = _get_item_cost(item)
+	var cost = int(item["base_cost"] * pow(item["cost_scaling"], level))
 	var can_afford = GameManager.gold >= cost
 	
 	var hbox = HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 10)
 	container.add_child(hbox)
 	
-	# Item info
-	var info_vbox = VBoxContainer.new()
-	info_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hbox.add_child(info_vbox)
+	var info = VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(info)
 	
-	var name_label = Label.new()
+	var name_l = Label.new()
+	name_l.text = "%s%s" % [item["name"], " (MAX)" if is_maxed else " (Lv %d)" % level]
+	name_l.add_theme_font_size_override("font_size", 14)
 	if is_maxed:
-		name_label.text = "%s (MAX)" % item["name"]
-		name_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
-	else:
-		name_label.text = "%s (Lv %d)" % [item["name"], level]
-	name_label.add_theme_font_size_override("font_size", 14)
-	info_vbox.add_child(name_label)
+		name_l.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+	info.add_child(name_l)
 	
-	var desc_label = Label.new()
-	desc_label.text = item["description"]
-	desc_label.add_theme_font_size_override("font_size", 11)
-	desc_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
-	info_vbox.add_child(desc_label)
+	var desc_l = Label.new()
+	desc_l.text = item["description"]
+	desc_l.add_theme_font_size_override("font_size", 11)
+	desc_l.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+	info.add_child(desc_l)
 	
-	# Buy button
-	var buy_btn = Button.new()
-	if is_maxed:
-		buy_btn.text = "MAX"
-		buy_btn.disabled = true
-	else:
-		buy_btn.text = "%d g" % cost
-		buy_btn.disabled = not can_afford
-	buy_btn.custom_minimum_size = Vector2(70, 30)
-	buy_btn.pressed.connect(_on_buy_item.bind(item))
-	hbox.add_child(buy_btn)
+	var btn = Button.new()
+	btn.text = "MAX" if is_maxed else "%d g" % cost
+	btn.disabled = is_maxed or not can_afford
+	btn.custom_minimum_size = Vector2(70, 30)
+	btn.pressed.connect(_on_buy.bind(item))
+	hbox.add_child(btn)
 
-func _get_item_cost(item: Dictionary) -> int:
+func _on_buy(item: Dictionary):
 	var level = item["get_level"].call()
-	return int(item["base_cost"] * pow(item["cost_scaling"], level))
-
-func _on_buy_item(item: Dictionary):
-	var cost = _get_item_cost(item)
+	var cost = int(item["base_cost"] * pow(item["cost_scaling"], level))
 	if GameManager.spend_gold(cost):
 		item["apply"].call()
 		gold_label.text = "Gold: %d" % GameManager.gold
-		_populate_items() # Refresh all items
+		_populate_items()
 
 func _on_start_wave():
 	close()
-	# Signal to main to start next wave
 	start_wave_requested.emit()
-
-signal start_wave_requested

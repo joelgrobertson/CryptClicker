@@ -16,7 +16,3 @@ texture = ExtResource("2_cw00f")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1897973846]
 shape = SubResource("CircleShape2D_tkdbb")
-
-[node name="NavigationAgent2D" type="NavigationAgent2D" parent="." unique_id=580372818]
-path_desired_distance = 8.0
-target_desired_distance = 8.0

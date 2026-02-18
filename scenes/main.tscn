@@ -2,14 +2,12 @@
 
 [ext_resource type="Script" uid="uid://cocalhy7enkal" path="res://scripts/castle.gd" id="1_0wfyh"]
 [ext_resource type="Script" uid="uid://bmleiygrlc04g" path="res://scripts/main.gd" id="1_tipki"]
-[ext_resource type="Script" uid="uid://dg4bfh8j0jeol" path="res://scripts/grid/grid_manager.gd" id="2_jyhfs"]
 [ext_resource type="Script" uid="uid://41f6epqokvn6" path="res://scripts/cursor/cursor_weapon.gd" id="2_sugp2"]
 [ext_resource type="Script" uid="uid://cwy5f6jkq2itb" path="res://scripts/managers/wave_manager.gd" id="4_tefeu"]
 [ext_resource type="Script" uid="uid://cimlhvw5k3lq" path="res://scripts/camera_controller.gd" id="5_o6xl0"]
 [ext_resource type="PackedScene" uid="uid://cok720mavhk17" path="res://scenes/enemy.tscn" id="6_85g3d"]
 [ext_resource type="Script" uid="uid://bdqq40jnkpiws" path="res://scripts/ui/hud.gd" id="6_tipki"]
-[ext_resource type="Script" uid="uid://ciwgpeu1qceur" path="res://scripts/ui/cell_panel.gd" id="9_ya4ey"]
-[ext_resource type="Script" uid="uid://c5i021ngmwhhj" path="res://scripts/managers/requisition_manager.gd" id="10_eb6dy"]
+[ext_resource type="Script" uid="uid://bleal4o5chvmt" path="res://scripts/ui/pick_ui.gd" id="9_85g3d"]
 [ext_resource type="Script" uid="uid://cbaea1drhbukq" path="res://scripts/ui/shop_ui.gd" id="11_trceg"]
 
 [sub_resource type="NavigationPolygon" id="NavigationPolygon_tefeu"]
@@ -42,9 +40,6 @@ offset_right = 48.0
 offset_bottom = 53.0
 theme_override_font_sizes/font_size = 12
 text = "1000 / 1000"
-
-[node name="GridManager" type="Node2D" parent="." unique_id=1771540209]
-script = ExtResource("2_jyhfs")
 
 [node name="CursorWeapon" type="Node2D" parent="." unique_id=2006168490]
 script = ExtResource("2_sugp2")
@@ -90,11 +85,6 @@ custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 text = "Castle: 100%"
 
-[node name="UnitsLabel" type="Label" parent="CanvasLayer/HUD/TopBar" unique_id=1585765417]
-custom_minimum_size = Vector2(150, 0)
-layout_mode = 2
-text = "Units: 0 / 8"
-
 [node name="WaveBanner" type="Label" parent="CanvasLayer/HUD" unique_id=1695841207]
 visible = false
 layout_mode = 1
@@ -130,15 +120,9 @@ grow_vertical = 2
 theme_override_font_sizes/font_size = 24
 horizontal_alignment = 1
 
-[node name="CellPanel" type="PanelContainer" parent="CanvasLayer" unique_id=1855175518]
-visible = false
-offset_right = 40.0
-offset_bottom = 40.0
-script = ExtResource("9_ya4ey")
-
-[node name="RequisitionManager" type="Node" parent="." unique_id=2122801148]
-script = ExtResource("10_eb6dy")
-
 [node name="ShopUI" type="CanvasLayer" parent="." unique_id=413355963]
 process_mode = 3
 script = ExtResource("11_trceg")
+
+[node name="PickUI" type="CanvasLayer" parent="." unique_id=2123927261]
+script = ExtResource("9_85g3d")

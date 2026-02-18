@@ -14,10 +14,10 @@ var drag_start_camera: Vector2
 
 func _ready():
 	zoom_target = zoom
-	# Start zoomed out to see full grid
-	var grid_total = GameManager.grid_size * GameManager.cell_pixel_size
+	# Start zoomed out to see the full play area (spawn radius ~600px)
+	var play_area = 1200.0 # Diameter of the play field
 	var viewport_size = get_viewport_rect().size
-	var needed_zoom = min(viewport_size.x / (grid_total * 1.2), viewport_size.y / (grid_total * 1.2))
+	var needed_zoom = min(viewport_size.x / (play_area * 1.2), viewport_size.y / (play_area * 1.2))
 	zoom_target = Vector2(needed_zoom, needed_zoom).clamp(Vector2.ONE * min_zoom, Vector2.ONE * max_zoom)
 	zoom = zoom_target
 
@@ -27,12 +27,18 @@ func _process(delta):
 	_handle_drag()
 
 func _handle_zoom(delta):
-	if Input.is_action_just_pressed("camera_zoom_in"):
-		zoom_target = (zoom * 1.15).clamp(Vector2.ONE * min_zoom, Vector2.ONE * max_zoom)
-	if Input.is_action_just_pressed("camera_zoom_out"):
-		zoom_target = (zoom * 0.85).clamp(Vector2.ONE * min_zoom, Vector2.ONE * max_zoom)
-	
+	# Zoom is handled via Ctrl+scroll (bare scroll = tool switching)
 	zoom = zoom.slerp(zoom_target, zoom_speed * delta)
+
+func _input(event):
+	# Ctrl+scroll for zoom
+	if event is InputEventMouseButton and event.pressed and event.ctrl_pressed:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			zoom_target = (zoom * 1.15).clamp(Vector2.ONE * min_zoom, Vector2.ONE * max_zoom)
+			get_viewport().set_input_as_handled()
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			zoom_target = (zoom * 0.85).clamp(Vector2.ONE * min_zoom, Vector2.ONE * max_zoom)
+			get_viewport().set_input_as_handled()
 
 func _handle_pan(delta):
 	var input = Input.get_vector("camera_move_left", "camera_move_right", "camera_move_up", "camera_move_down")
