@@ -296,6 +296,16 @@ func _on_soul_charge_changed(remaining: int):
 func update_soul_charges(remaining: int):
 	_on_soul_charge_changed(remaining)
 
+func show_wave_banner(text: String):
+	if wave_banner:
+		wave_banner.text = text
+		wave_banner.visible = true
+		wave_banner.modulate.a = 1.0
+		var tween = create_tween()
+		tween.tween_interval(1.5)
+		tween.tween_property(wave_banner, "modulate:a", 0.0, 0.5)
+		tween.tween_callback(func(): wave_banner.visible = false)
+
 func _on_mana_changed(current_mana: float, p_max_mana: float):
 	if mana_bar_fill:
 		mana_bar_fill.anchor_right = current_mana / p_max_mana if p_max_mana > 0 else 0.0

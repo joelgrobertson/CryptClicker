@@ -35,7 +35,59 @@ var mouse_vel: Vector2 = Vector2.ZERO
 var prev_mouse_pos: Vector2 = Vector2.ZERO
 
 func _ready():
-	pass
+	z_index = 100 # Draw above everything
+
+func _draw():
+	# Necromancer hand cursor
+	var is_grabbing = grabbed_entity != null
+	var is_over_enemy = false
+	
+	if not is_grabbing:
+		for enemy in get_tree().get_nodes_in_group("enemies"):
+			if is_instance_valid(enemy) and not enemy.is_dying:
+				if global_position.distance_to(enemy.global_position) < grab_radius:
+					is_over_enemy = true
+					break
+	
+	# Aura glow
+	var glow_color = Color(0.5, 0.3, 0.7, 0.12) if not is_grabbing else Color(0.6, 0.3, 0.9, 0.18)
+	draw_circle(Vector2.ZERO, 30.0, glow_color)
+	
+	# Hand color
+	var hand_color = Color(0.75, 0.55, 0.95) # Purple/necromantic
+	if is_grabbing:
+		hand_color = Color(0.85, 0.5, 1.0)
+	elif is_over_enemy:
+		hand_color = Color(0.9, 0.7, 0.4) # Gold highlight
+	
+	if is_grabbing:
+		# Clenched fist
+		draw_circle(Vector2(0, -2), 7.0, hand_color)
+		draw_arc(Vector2(0, -2), 5.0, -0.5, PI + 0.5, 8, hand_color * 0.8, 2.0)
+	elif is_over_enemy:
+		# Open grab hand
+		draw_line(Vector2(-5, 2), Vector2(-5, -4), hand_color, 2.0)
+		draw_line(Vector2(-5, -4), Vector2(5, -4), hand_color, 2.0)
+		draw_line(Vector2(5, -4), Vector2(5, 2), hand_color, 2.0)
+		# Spread fingers
+		draw_line(Vector2(-6, -4), Vector2(-8, -13), hand_color, 2.0)
+		draw_line(Vector2(-2, -4), Vector2(-3, -15), hand_color, 2.0)
+		draw_line(Vector2(2, -4), Vector2(3, -15), hand_color, 2.0)
+		draw_line(Vector2(6, -4), Vector2(8, -13), hand_color, 2.0)
+		draw_line(Vector2(-5, 0), Vector2(-11, -3), hand_color, 2.0)
+	else:
+		# Pointing/idle hand
+		draw_line(Vector2(-4, 3), Vector2(-4, -3), hand_color, 2.0)
+		draw_line(Vector2(-4, -3), Vector2(4, -3), hand_color, 2.0)
+		draw_line(Vector2(4, -3), Vector2(4, 3), hand_color, 2.0)
+		# Fingers
+		draw_line(Vector2(-4, -3), Vector2(-5, -12), hand_color, 2.0)
+		draw_line(Vector2(-1, -3), Vector2(-1, -14), hand_color, 2.0)
+		draw_line(Vector2(2, -3), Vector2(2, -13), hand_color, 2.0)
+		draw_line(Vector2(4, -3), Vector2(5, -11), hand_color, 2.0)
+		draw_line(Vector2(-4, 1), Vector2(-9, -1), hand_color, 2.0)
+	
+	queue_redraw()
 
 func setup(p_loadout: Node):
 	loadout = p_loadout
