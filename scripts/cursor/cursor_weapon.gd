@@ -34,85 +34,71 @@ var grab_offset: Vector2 = Vector2.ZERO
 var mouse_vel: Vector2 = Vector2.ZERO
 var prev_mouse_pos: Vector2 = Vector2.ZERO
 
-func _ready():
-	z_index = 100
-	process_mode = Node.PROCESS_MODE_ALWAYS # Draw hand even when paused
-
-# Hand rotation tracking
 var hand_angle: float = 0.0
 var smoothed_vel: Vector2 = Vector2.ZERO
+var hand_canvas: CanvasLayer = null
+var hand_draw_node: Node2D = null
+var hand_state: int = 0 # 0=idle, 1=over_grabbable, 2=grabbing
 
-func _draw():
-	# Smooth velocity for rotation
-	smoothed_vel = smoothed_vel.lerp(mouse_vel, 0.15)
+func _ready():
+	z_index = 100
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	
-	# Rotate hand to match movement direction
-	if smoothed_vel.length() > 40.0:
-		hand_angle = lerp_angle(hand_angle, smoothed_vel.angle() + PI / 2.0, 0.12)
+	# Hand draws on a CanvasLayer above all UI
+	hand_canvas = CanvasLayer.new()
+	hand_canvas.layer = 50
+	hand_canvas.process_mode = Node.PROCESS_MODE_ALWAYS
+	get_tree().root.call_deferred("add_child", hand_canvas)
 	
-	# Necromancer hand cursor
-	var is_grabbing = grabbed_entity != null and is_instance_valid(grabbed_entity)
-	var is_over_grabbable = false
-	
-	if not is_grabbing:
-		for enemy in get_tree().get_nodes_in_group("enemies"):
-			if is_instance_valid(enemy) and not enemy.is_dying:
-				if global_position.distance_to(enemy.global_position) < grab_radius:
-					is_over_grabbable = true
-					break
-		if not is_over_grabbable:
-			for unit in get_tree().get_nodes_in_group("units"):
-				if is_instance_valid(unit) and not (unit.get("is_dying") and unit.is_dying):
-					if global_position.distance_to(unit.global_position) < grab_radius:
-						is_over_grabbable = true
-						break
-	
-	# Aura glow
-	var glow_color = Color(0.5, 0.3, 0.7, 0.12) if not is_grabbing else Color(0.6, 0.3, 0.9, 0.18)
-	draw_circle(Vector2.ZERO, 30.0, glow_color)
-	
-	# Hand color
-	var hand_color = Color(0.75, 0.55, 0.95)
-	if is_grabbing:
-		hand_color = Color(0.85, 0.5, 1.0)
-	elif is_over_grabbable:
-		hand_color = Color(0.9, 0.7, 0.4)
-	
-	# Apply rotation
-	draw_set_transform(Vector2.ZERO, hand_angle, Vector2.ONE)
-	
-	if is_grabbing:
-		# Clenched fist
-		draw_circle(Vector2(0, -2), 7.0, hand_color)
-		draw_arc(Vector2(0, -2), 5.0, -0.5, PI + 0.5, 8, hand_color * 0.8, 2.0)
-	elif is_over_grabbable:
-		# Open grab hand
-		draw_line(Vector2(-5, 2), Vector2(-5, -4), hand_color, 2.0)
-		draw_line(Vector2(-5, -4), Vector2(5, -4), hand_color, 2.0)
-		draw_line(Vector2(5, -4), Vector2(5, 2), hand_color, 2.0)
-		draw_line(Vector2(-6, -4), Vector2(-8, -13), hand_color, 2.0)
-		draw_line(Vector2(-2, -4), Vector2(-3, -15), hand_color, 2.0)
-		draw_line(Vector2(2, -4), Vector2(3, -15), hand_color, 2.0)
-		draw_line(Vector2(6, -4), Vector2(8, -13), hand_color, 2.0)
-		draw_line(Vector2(-5, 0), Vector2(-11, -3), hand_color, 2.0)
-	else:
-		# Pointing/idle hand
-		draw_line(Vector2(-4, 3), Vector2(-4, -3), hand_color, 2.0)
-		draw_line(Vector2(-4, -3), Vector2(4, -3), hand_color, 2.0)
-		draw_line(Vector2(4, -3), Vector2(4, 3), hand_color, 2.0)
-		draw_line(Vector2(-4, -3), Vector2(-5, -12), hand_color, 2.0)
-		draw_line(Vector2(-1, -3), Vector2(-1, -14), hand_color, 2.0)
-		draw_line(Vector2(2, -3), Vector2(2, -13), hand_color, 2.0)
-		draw_line(Vector2(4, -3), Vector2(5, -11), hand_color, 2.0)
-		draw_line(Vector2(-4, 1), Vector2(-9, -1), hand_color, 2.0)
-	
-	# Reset transform
-	draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
-	
-	queue_redraw()
+	hand_draw_node = Node2D.new()
+	hand_draw_node.process_mode = Node.PROCESS_MODE_ALWAYS
+	hand_canvas.call_deferred("add_child", hand_draw_node)
+	hand_draw_node.draw.connect(_draw_hand)
 
 func setup(p_loadout: Node):
 	loadout = p_loadout
+
+func _draw_hand():
+	if not hand_draw_node: return
+	
+	# Aura glow
+	var glow_color = Color(0.5, 0.3, 0.7, 0.12) if hand_state != 2 else Color(0.6, 0.3, 0.9, 0.18)
+	hand_draw_node.draw_circle(Vector2.ZERO, 30.0, glow_color)
+	
+	# Hand color
+	var hand_color = Color(0.75, 0.55, 0.95)
+	if hand_state == 2: hand_color = Color(0.85, 0.5, 1.0)
+	elif hand_state == 1: hand_color = Color(0.9, 0.7, 0.4)
+	
+	# Apply rotation
+	hand_draw_node.draw_set_transform(Vector2.ZERO, hand_angle, Vector2.ONE)
+	
+	if hand_state == 2:
+		# Clenched fist
+		hand_draw_node.draw_circle(Vector2(0, -2), 7.0, hand_color)
+		hand_draw_node.draw_arc(Vector2(0, -2), 5.0, -0.5, PI + 0.5, 8, hand_color * 0.8, 2.0)
+	elif hand_state == 1:
+		# Open grab hand
+		hand_draw_node.draw_line(Vector2(-5, 2), Vector2(-5, -4), hand_color, 2.0)
+		hand_draw_node.draw_line(Vector2(-5, -4), Vector2(5, -4), hand_color, 2.0)
+		hand_draw_node.draw_line(Vector2(5, -4), Vector2(5, 2), hand_color, 2.0)
+		hand_draw_node.draw_line(Vector2(-6, -4), Vector2(-8, -13), hand_color, 2.0)
+		hand_draw_node.draw_line(Vector2(-2, -4), Vector2(-3, -15), hand_color, 2.0)
+		hand_draw_node.draw_line(Vector2(2, -4), Vector2(3, -15), hand_color, 2.0)
+		hand_draw_node.draw_line(Vector2(6, -4), Vector2(8, -13), hand_color, 2.0)
+		hand_draw_node.draw_line(Vector2(-5, 0), Vector2(-11, -3), hand_color, 2.0)
+	else:
+		# Pointing/idle hand
+		hand_draw_node.draw_line(Vector2(-4, 3), Vector2(-4, -3), hand_color, 2.0)
+		hand_draw_node.draw_line(Vector2(-4, -3), Vector2(4, -3), hand_color, 2.0)
+		hand_draw_node.draw_line(Vector2(4, -3), Vector2(4, 3), hand_color, 2.0)
+		hand_draw_node.draw_line(Vector2(-4, -3), Vector2(-5, -12), hand_color, 2.0)
+		hand_draw_node.draw_line(Vector2(-1, -3), Vector2(-1, -14), hand_color, 2.0)
+		hand_draw_node.draw_line(Vector2(2, -3), Vector2(2, -13), hand_color, 2.0)
+		hand_draw_node.draw_line(Vector2(4, -3), Vector2(5, -11), hand_color, 2.0)
+		hand_draw_node.draw_line(Vector2(-4, 1), Vector2(-9, -1), hand_color, 2.0)
+	
+	hand_draw_node.draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
 
 func _process(delta):
 	# Always follow mouse (even when paused)
@@ -122,6 +108,33 @@ func _process(delta):
 	var current_pos = get_global_mouse_position()
 	mouse_vel = (current_pos - prev_mouse_pos) / max(delta, 0.001)
 	prev_mouse_pos = current_pos
+	
+	# Smooth velocity and rotation for hand visual
+	smoothed_vel = smoothed_vel.lerp(mouse_vel, 0.25)
+	if smoothed_vel.length() > 50.0:
+		hand_angle = lerp_angle(hand_angle, smoothed_vel.angle() + PI / 2.0, 0.15)
+	
+	# Determine hand state
+	var is_grabbing = grabbed_entity != null and is_instance_valid(grabbed_entity)
+	if is_grabbing:
+		hand_state = 2
+	else:
+		hand_state = 0
+		for enemy in get_tree().get_nodes_in_group("enemies"):
+			if is_instance_valid(enemy) and not enemy.is_dying:
+				if global_position.distance_to(enemy.global_position) < grab_radius:
+					hand_state = 1; break
+		if hand_state == 0:
+			for unit in get_tree().get_nodes_in_group("units"):
+				if is_instance_valid(unit) and not (unit.get("is_dying") and unit.is_dying):
+					if global_position.distance_to(unit.global_position) < grab_radius:
+						hand_state = 1; break
+	
+	# Update hand draw node (screen space via viewport)
+	if hand_draw_node and is_instance_valid(hand_draw_node):
+		var screen_pos = get_viewport().get_mouse_position()
+		hand_draw_node.position = screen_pos
+		hand_draw_node.queue_redraw()
 	
 	if GameManager.current_state != GameManager.GameState.WAVE_ACTIVE:
 		return
