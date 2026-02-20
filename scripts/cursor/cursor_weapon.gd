@@ -35,41 +35,61 @@ var mouse_vel: Vector2 = Vector2.ZERO
 var prev_mouse_pos: Vector2 = Vector2.ZERO
 
 func _ready():
-	z_index = 100 # Draw above everything
+	z_index = 100
+	process_mode = Node.PROCESS_MODE_ALWAYS # Draw hand even when paused
+
+# Hand rotation tracking
+var hand_angle: float = 0.0
+var smoothed_vel: Vector2 = Vector2.ZERO
 
 func _draw():
+	# Smooth velocity for rotation
+	smoothed_vel = smoothed_vel.lerp(mouse_vel, 0.15)
+	
+	# Rotate hand to match movement direction
+	if smoothed_vel.length() > 40.0:
+		hand_angle = lerp_angle(hand_angle, smoothed_vel.angle() + PI / 2.0, 0.12)
+	
 	# Necromancer hand cursor
-	var is_grabbing = grabbed_entity != null
-	var is_over_enemy = false
+	var is_grabbing = grabbed_entity != null and is_instance_valid(grabbed_entity)
+	var is_over_grabbable = false
 	
 	if not is_grabbing:
 		for enemy in get_tree().get_nodes_in_group("enemies"):
 			if is_instance_valid(enemy) and not enemy.is_dying:
 				if global_position.distance_to(enemy.global_position) < grab_radius:
-					is_over_enemy = true
+					is_over_grabbable = true
 					break
+		if not is_over_grabbable:
+			for unit in get_tree().get_nodes_in_group("units"):
+				if is_instance_valid(unit) and not (unit.get("is_dying") and unit.is_dying):
+					if global_position.distance_to(unit.global_position) < grab_radius:
+						is_over_grabbable = true
+						break
 	
 	# Aura glow
 	var glow_color = Color(0.5, 0.3, 0.7, 0.12) if not is_grabbing else Color(0.6, 0.3, 0.9, 0.18)
 	draw_circle(Vector2.ZERO, 30.0, glow_color)
 	
 	# Hand color
-	var hand_color = Color(0.75, 0.55, 0.95) # Purple/necromantic
+	var hand_color = Color(0.75, 0.55, 0.95)
 	if is_grabbing:
 		hand_color = Color(0.85, 0.5, 1.0)
-	elif is_over_enemy:
-		hand_color = Color(0.9, 0.7, 0.4) # Gold highlight
+	elif is_over_grabbable:
+		hand_color = Color(0.9, 0.7, 0.4)
+	
+	# Apply rotation
+	draw_set_transform(Vector2.ZERO, hand_angle, Vector2.ONE)
 	
 	if is_grabbing:
 		# Clenched fist
 		draw_circle(Vector2(0, -2), 7.0, hand_color)
 		draw_arc(Vector2(0, -2), 5.0, -0.5, PI + 0.5, 8, hand_color * 0.8, 2.0)
-	elif is_over_enemy:
+	elif is_over_grabbable:
 		# Open grab hand
 		draw_line(Vector2(-5, 2), Vector2(-5, -4), hand_color, 2.0)
 		draw_line(Vector2(-5, -4), Vector2(5, -4), hand_color, 2.0)
 		draw_line(Vector2(5, -4), Vector2(5, 2), hand_color, 2.0)
-		# Spread fingers
 		draw_line(Vector2(-6, -4), Vector2(-8, -13), hand_color, 2.0)
 		draw_line(Vector2(-2, -4), Vector2(-3, -15), hand_color, 2.0)
 		draw_line(Vector2(2, -4), Vector2(3, -15), hand_color, 2.0)
@@ -80,12 +100,14 @@ func _draw():
 		draw_line(Vector2(-4, 3), Vector2(-4, -3), hand_color, 2.0)
 		draw_line(Vector2(-4, -3), Vector2(4, -3), hand_color, 2.0)
 		draw_line(Vector2(4, -3), Vector2(4, 3), hand_color, 2.0)
-		# Fingers
 		draw_line(Vector2(-4, -3), Vector2(-5, -12), hand_color, 2.0)
 		draw_line(Vector2(-1, -3), Vector2(-1, -14), hand_color, 2.0)
 		draw_line(Vector2(2, -3), Vector2(2, -13), hand_color, 2.0)
 		draw_line(Vector2(4, -3), Vector2(5, -11), hand_color, 2.0)
 		draw_line(Vector2(-4, 1), Vector2(-9, -1), hand_color, 2.0)
+	
+	# Reset transform
+	draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
 	
 	queue_redraw()
 
@@ -93,9 +115,10 @@ func setup(p_loadout: Node):
 	loadout = p_loadout
 
 func _process(delta):
+	# Always follow mouse (even when paused)
 	global_position = get_global_mouse_position()
 	
-	# Track mouse velocity for throw direction
+	# Track mouse velocity for throw direction and hand rotation
 	var current_pos = get_global_mouse_position()
 	mouse_vel = (current_pos - prev_mouse_pos) / max(delta, 0.001)
 	prev_mouse_pos = current_pos
@@ -112,7 +135,6 @@ func _process(delta):
 	if is_holding_left:
 		hold_time += delta
 		_process_left_hold(delta)
-		# Hold to repeat smite
 		if smite_cooldown <= 0:
 			_perform_smite()
 			_proc_click_augments()

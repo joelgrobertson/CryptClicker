@@ -33,7 +33,11 @@ func _ready():
 	GameManager.soul_charge_lost.connect(_on_soul_charge_lost)
 	XpManager.xp_bar_filled.connect(_on_xp_bar_filled)
 	
-	# Hide cursor
+	# UI signals
+	if pick_ui: pick_ui.pick_made.connect(_on_pick_selected)
+	if shop_ui: shop_ui.start_wave_requested.connect(_on_shop_closed)
+	
+	# Hide system cursor — the hand IS the cursor, always
 	Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
 	
 	# Start
@@ -62,23 +66,27 @@ func _on_wave_started(wave_number: int):
 	if hud: hud.show_wave_banner("Wave %d" % wave_number)
 
 func _on_wave_completed(wave_number: int):
-	# Clean up units and ground zones
+	# Clean up ground zones
 	for zone in get_tree().get_nodes_in_group("ground_zones"):
 		zone.queue_free()
 	# Open shop
 	GameManager.open_shop()
-	if shop_ui: shop_ui.show_shop()
+	if shop_ui: shop_ui.open(wave_number)
 
 func _on_xp_bar_filled():
 	var force_summon = LoadoutManager.get_summon_count() == 0
 	var picks = LoadoutManager.generate_picks(3, force_summon)
 	if picks.size() > 0 and pick_ui:
 		get_tree().paused = true
-		pick_ui.show_picks(picks)
+		pick_ui.open(picks)
 
 func _on_pick_selected(pick: Dictionary):
 	LoadoutManager.apply_pick(pick)
 	get_tree().paused = false
+
+func _on_shop_closed():
+	GameManager.start_wave()
+	wave_manager._begin_wave()
 
 func _on_screen_shake(amount: float):
 	shake_amount = max(shake_amount, amount)
