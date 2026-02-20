@@ -1,87 +1,114 @@
 # main.gd
-# Root scene controller. Wires up all Week 3 systems.
+# V4: Wires up all systems. Soul well at center, screen shake, auto-summoner.
 extends Node2D
 
-@onready var wave_manager: Node = $WaveManager
-@onready var cursor_weapon: Node2D = $CursorWeapon
-@onready var castle: Node2D = $Castle
-@onready var camera: Camera2D = $Camera2D
-@onready var canvas_layer: CanvasLayer = $CanvasLayer
-@onready var hud: Control = $CanvasLayer/HUD
-@onready var loadout_manager: Node = LoadoutManager
-@onready var shop_ui: CanvasLayer = $ShopUI
-@onready var pick_ui: CanvasLayer = $PickUI
+@onready var cursor_weapon = $CursorWeapon
+@onready var wave_manager = $WaveManager
+@onready var hud = $CanvasLayer/HUD
+@onready var camera = $Camera2D
+@onready var pick_ui = $PickUI
+@onready var shop_ui = $ShopUI
 
-var started: bool = false
-var is_first_pick: bool = true
+var auto_summoner: Node = null
+var unit_scene: PackedScene = preload("res://scenes/auto_unit.tscn")
+
+# Screen shake
+var shake_amount: float = 0.0
 
 func _ready():
-	# Process modes for pause support
-	camera.process_mode = Node.PROCESS_MODE_ALWAYS
-	canvas_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	# Setup cursor
+	cursor_weapon.setup(LoadoutManager)
 	
-	# Setup cursor weapon
-	var unit_scene = preload("res://scenes/auto_unit.tscn")
-	cursor_weapon.setup(loadout_manager, unit_scene)
+	# Setup auto-summoner
+	auto_summoner = Node.new()
+	auto_summoner.set_script(load("res://scripts/units/auto_summoner.gd"))
+	add_child(auto_summoner)
+	auto_summoner.setup(LoadoutManager, unit_scene)
 	
-	# Setup HUD
-	hud.setup(loadout_manager)
-	
-	# Setup shop
-	shop_ui.setup(loadout_manager)
-	
-	# Connect signals
-	GameManager.game_over.connect(_on_game_over)
+	# Signals
+	GameManager.wave_started.connect(_on_wave_started)
 	GameManager.wave_completed.connect(_on_wave_completed)
-	shop_ui.start_wave_requested.connect(_on_shop_start_wave)
-	
-	# XP pick system
+	GameManager.game_over.connect(_on_game_over)
+	GameManager.screen_shake_requested.connect(_on_screen_shake)
+	GameManager.soul_charge_lost.connect(_on_soul_charge_lost)
 	XpManager.xp_bar_filled.connect(_on_xp_bar_filled)
-	pick_ui.pick_made.connect(_on_pick_made)
+	
+	# Hide cursor
+	Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
 	
 	# Start
-	await get_tree().create_timer(1.0).timeout
 	_start_game()
+
+func _process(delta):
+	# Screen shake
+	if shake_amount > 0.5:
+		camera.offset = Vector2(
+			randf_range(-1, 1) * shake_amount,
+			randf_range(-1, 1) * shake_amount
+		)
+		shake_amount *= 0.85
+	else:
+		camera.offset = Vector2.ZERO
+		shake_amount = 0.0
 
 func _start_game():
 	GameManager.reset_game()
-	UpgradeManager.reset_upgrades()
 	XpManager.reset()
-	loadout_manager.reset()
-	is_first_pick = true
-	started = true
+	LoadoutManager.reset()
+	if auto_summoner: auto_summoner.reset()
 	wave_manager.start_first_wave()
 
-func _on_xp_bar_filled():
-	# Generate picks and show UI
-	var force_summon = is_first_pick
-	var picks = loadout_manager.generate_picks(3, force_summon)
-	is_first_pick = false
-	
-	if picks.size() > 0:
-		pick_ui.open(picks)
-
-func _on_pick_made(pick: Dictionary):
-	loadout_manager.apply_pick(pick)
+func _on_wave_started(wave_number: int):
+	if hud: hud.show_wave_banner("Wave %d" % wave_number)
 
 func _on_wave_completed(wave_number: int):
-	# Clean up units between waves
-	for unit in get_tree().get_nodes_in_group("units"):
-		if is_instance_valid(unit):
-			unit.queue_free()
-	
-	# Clean up ground zones
+	# Clean up units and ground zones
 	for zone in get_tree().get_nodes_in_group("ground_zones"):
-		if is_instance_valid(zone):
-			zone.queue_free()
-	
-	await get_tree().create_timer(1.0).timeout
+		zone.queue_free()
+	# Open shop
 	GameManager.open_shop()
-	shop_ui.open(wave_number)
+	if shop_ui: shop_ui.show_shop()
 
-func _on_shop_start_wave():
-	wave_manager.start_first_wave()
+func _on_xp_bar_filled():
+	var force_summon = LoadoutManager.get_summon_count() == 0
+	var picks = LoadoutManager.generate_picks(3, force_summon)
+	if picks.size() > 0 and pick_ui:
+		get_tree().paused = true
+		pick_ui.show_picks(picks)
 
-func _on_game_over(final_wave: int, total_kills: int, total_gold: int):
-	print("=== GAME OVER ===")
-	print("Wave: %d | Kills: %d | Gold: %d" % [final_wave, total_kills, total_gold])
+func _on_pick_selected(pick: Dictionary):
+	LoadoutManager.apply_pick(pick)
+	get_tree().paused = false
+
+func _on_screen_shake(amount: float):
+	shake_amount = max(shake_amount, amount)
+
+func _on_soul_charge_lost(remaining: int):
+	if hud: hud.update_soul_charges(remaining)
+
+func _on_game_over(final_wave: int, _total_kills: int, _total_gold: int):
+	if hud: hud.show_wave_banner("GAME OVER — Wave %d" % final_wave)
+
+func _draw():
+	# Soul well visual
+	var charges = GameManager.soul_charges
+	var max_charges = GameManager.max_soul_charges
+	var pulse = sin(Time.get_ticks_msec() * 0.002) * 8.0
+	var alpha = float(charges) / float(max_charges)
+	
+	# Glow
+	draw_circle(Vector2.ZERO, 50.0 + pulse, Color(0.4, 0.25, 0.7, 0.15 * alpha))
+	draw_circle(Vector2.ZERO, 30.0 + pulse * 0.5, Color(0.5, 0.35, 0.85, 0.25 * alpha))
+	
+	# Core
+	draw_circle(Vector2.ZERO, 18.0, Color(0.55, 0.4, 0.85, 0.6 + sin(Time.get_ticks_msec() * 0.003) * 0.2))
+	draw_arc(Vector2.ZERO, 20.0, 0, TAU, 24, Color(0.7, 0.55, 1.0, 0.4), 2.0)
+	
+	# Charge orbs
+	for i in range(charges):
+		var angle = (float(i) / float(max_charges)) * TAU + Time.get_ticks_msec() * 0.0003
+		var dist = 32.0 + sin(Time.get_ticks_msec() * 0.002 + i * 0.5) * 3.0
+		var orb_pos = Vector2(cos(angle) * dist, sin(angle) * dist)
+		draw_circle(orb_pos, 3.0, Color(0.7, 0.6, 1.0, 0.5 + sin(Time.get_ticks_msec() * 0.003 + i) * 0.3))
+	
+	queue_redraw()

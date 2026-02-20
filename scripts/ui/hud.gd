@@ -23,7 +23,7 @@ var pause_overlay: ColorRect
 
 func _ready():
 	GameManager.gold_changed.connect(_on_gold_changed)
-	GameManager.castle_damaged.connect(_on_castle_damaged)
+	GameManager.soul_charge_lost.connect(_on_soul_charge_changed)
 	GameManager.wave_started.connect(_on_wave_started)
 	GameManager.wave_completed.connect(_on_wave_completed)
 	GameManager.mana_changed.connect(_on_mana_changed)
@@ -275,7 +275,7 @@ func _input(event):
 
 func _update_all():
 	_on_gold_changed(GameManager.gold)
-	_on_castle_damaged(GameManager.castle_hp, GameManager.castle_max_hp)
+	_on_soul_charge_changed(GameManager.soul_charges)
 	_on_mana_changed(GameManager.mana, GameManager.max_mana)
 	_on_xp_changed(XpManager.current_xp, XpManager.xp_required)
 
@@ -283,16 +283,18 @@ func _on_gold_changed(new_amount: int):
 	if gold_label:
 		gold_label.text = "Gold: %d" % new_amount
 
-func _on_castle_damaged(current_hp: float, max_hp: float):
+func _on_soul_charge_changed(remaining: int):
 	if castle_label:
-		var pct = int((current_hp / max_hp) * 100)
-		castle_label.text = "Crypt: %d%%" % pct
-		if pct > 60:
+		castle_label.text = "⬡ %d" % remaining
+		if remaining > 10:
 			castle_label.add_theme_color_override("font_color", Color.WHITE)
-		elif pct > 30:
+		elif remaining > 5:
 			castle_label.add_theme_color_override("font_color", Color.YELLOW)
 		else:
 			castle_label.add_theme_color_override("font_color", Color.RED)
+
+func update_soul_charges(remaining: int):
+	_on_soul_charge_changed(remaining)
 
 func _on_mana_changed(current_mana: float, p_max_mana: float):
 	if mana_bar_fill:
